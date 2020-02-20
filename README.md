@@ -7,18 +7,18 @@ lasttested: "2020-02-20"
 
 # Creating a multizone highly available application using IBM Virtual Private Cloud
 
-This tutorial will walk you thru creating a custom Virtual Private Cloud (VPC) within IBM Public Cloud.  
+This tutorial will walk thru creating a custom Virtual Private Cloud (VPC) within IBM Public Cloud.  
 
 ## Architecture
 
-TODO:  upload architecture diagram  
+![VPC Architecture](images/billg-vpc-mzr.png)
+
 TODO:  describe diagram with numbers and why
 
 ## Outline
 
-For an overview of IBM Virtual Private Cloud (VPC), please refer to [About VPC](https://cloud.ibm.com/docs/vpc-on-classic?topic=vpc-on-classic-about).
 
-1. Configure a Virtual Private Cloud (VPC).
+1. Configure a Virtual Private Cloud ([VPC](https://cloud.ibm.com/docs/vpc-on-classic?topic=vpc-on-classic-about)).
 2. Create Virtual Server Instances (VSI).
 3. Install web-app workload.
 4. Configure High Availability and horizontal scalability.
