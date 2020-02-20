@@ -1,13 +1,18 @@
-# Using VPC-Gen2-VSIs across a Multizone Region for HA and Scalability
+---
+copyright:
+  years: 2020
+lastupdated: "2020-02-20"
+lasttested: "2020-02-20"
+---
+
+# Creating a multizone highly available application using IBM Virtual Private Cloud
 
 This tutorial will walk you thru creating a custom Virtual Private Cloud (VPC) within IBM Public Cloud.  
 
-
 ## Architecture
 
-TODO:  upload architecture diagram
+TODO:  upload architecture diagram  
 TODO:  describe diagram with numbers and why
-
 
 ## Outline
 
