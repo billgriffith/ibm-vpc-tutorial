@@ -1,4 +1,5 @@
-# Creating a multi-zone highly available application using IBM Virtual Private Cloud
+# Create a custom IBM Virtual Private Cloud (VPC) across 3 zones for high availability
+
 IBM Cloud™ comprises over 60 [data centers](https://www.ibm.com/cloud/data-centers/) around the world.  Additionally, IBM Cloud includes 6 multi-zone regions ([MZR](https://cloud.ibm.com/docs/infrastructure/loadbalancer-service?topic=loadbalancer-service-multi-zone-region-mzr-overview)) where at least 3 geographically dispersed and independent data-centers can be clustered together over a very high-speed, low-latency network to provide the infrastructure for highly available applications.  Within these MZRs, you can create your own Virtual Private Cloud ([VPC](https://cloud.ibm.com/docs/vpc-on-classic?topic=vpc-on-classic-about)), which  provide your own software define network within the IBM public cloud.  VPC gives you the security of a private cloud, with the agility and ease of use as a public cloud.
 
 This tutorial will walk thru creating a custom Virtual Private Cloud (VPC) within an MZR of the IBM Public Cloud.  We will cover the following topics:
@@ -70,7 +71,7 @@ Isolating VSIs to separate subnets allows easier firewalling and protection (e.g
 8. Repeat this section for the 5 other subnets in the Architecture diagram.
 9. Click the **VPC Layout** link and select your VPC in the drop-down.  Click each subnet box and examine the subnet names, IP address ranges, data-center location, and public Gateway IP address.
 	![vpc layout](images/vpc_subnets.png)
-	* Notice how the subnets within a zone, use the same Public Gateway.
+	* Notice how the subnets within a zone use the same Public Gateway.
 
 ### 4.  Create security groups for the Database tier.  
 Network Interface Cards (NICs) within VSIs are attached to security groups and allow you to filter what traffic is allowed into the VSI.  By default, all traffic is blocked, so you'll need to open up specific ports demanding on what services within the VSI you wish to expose to other computers.  A really helpful feature is the ability to allow VSIs that are attached to other security groups to connect (e.g.  only allow the web-tier VSIs to connect to the db-tier VSIs.)  You can read more about security groups [here](https://cloud.ibm.com/docs/vpc?topic=vpc-using-security-groups).
@@ -139,6 +140,59 @@ Now that you have VSIs provisioned within isolated subnets within your VPC, you 
 7.  Run ``lscpu`` to examine the CPU details of the **db1**.  
 ![DB Server POWER CPU Info](images/db_cpu_info.png)
 	* Notice that the database server is a POWER9 CPU running the Ubuntu operating system.
+
+### 3.  Install NGinx on the web VSIs
+In order to test the load balancer, you will install the NGinx web server on each of the web VSIs.
+
+1. Login to the web VSI and install NGinx. 
+```
+apt-get update
+apt-get -y install nginx
+```
+2. Add hostname to default NGinx home page by editing ``/var/www/html/index.nginx-debian.html`` and add ``on <hostname>`` to the H1 element.  
+![NGINX Home Page](images/nginx_home_page.png)
+
+3. Test that NGinx is serving up content with ``curl localhost``.
+
+4. Repeat this process for the remaining web VSIs.
+
+### 4. Configure a VPC Load Balancer  
+* TODO:  blurb about load balancers
+
+1.  From the **VPC Infrastructure** menu, click the **Load balancers** to add a new load balancer to your VPC.  
+2.  Click the **New load balancer** link within the Load balancers for VPC page.
+3.  Enter a descriptive name for the load balancer (e.g. **wordpress-loadbalancer**) and ensure the correct VPC is chosen (e.g. **us-south-dev-vpc**).
+4.  Select your desired **Resource group**.
+5.  Add desired **Tags**.
+6.  Choose the **Region** where you VPC resides.
+7.  Choose **Public** as the type of load balancer.
+8.  Click the **Subnets** drop-down and choose the 3 web subnets.  
+![Load Balancer Subnets](images/wordpress_load_balancer.png)
+9.  Click the **New pool** link to configure the **Back-end pool** of services this load balancer will route to.
+10.  Name the back-end pool (e.g. **web-servers**) and leave the Defaults to the rest and click **Save**.  
+11.  Click the **Attach** link to add **Instances** to the **Back-end pool**.
+12.  Add the **web** subnets and choose the **web** VSI in that subnet.  Repeat this for all 3 zones of the MZR, then click the **Attach** button.  
+![Load Balancer Instances](images/load_balancer_instances.png)
+13.  Click the **New listener** link to specify the incoming protocol and port that will get routed to the back-end pool.
+14.  Select **HTTP** for the Protocol and enter port **80** for the port.
+15.  Ensure **web-servers** is selected for the Back-end pool, then click **Save**.
+16.  Once everything is entered correctly, click the **Create load balancer** button to provision the load balancer.  
+![VPC Load Balancer](images/vpc_load_balancer.png)
+
+### 5. Test the load balancer.
+1.  Drill into the newly created load balancer and notice the **Heath Status** shows **0/3** and is **Red**.  
+![Load Balancer Heath Status](images/load_balancer_heath_status.png)
+	* The health status if failing as port 80 is blocked by the **default-security-group**.
+	* Add an **Inbound rule** for TCP port 80 from any source so you can connect to NGinx.
+
+2.  Go back to your load balancer and watch the **Heath Status** go from **Red** to **Yellow** to **Green**.  
+![Load Balancer Status Good](images/load_balancer_status_good.png)
+
+3.  Click the **Hostname** dotted link to copy the public URL.
+4.  Paste this URL into your web browser and notice NGinx is serving up the default index page.  
+![NGinx Default Page](images/nginx_default_page.png)
+5.  Refresh your browser pointing to the load balancer and notice the H1 element indicates each of the web servers are being routed to in a round-robin fashion.
+
 
 Congratulations!!!  You have successfully create a software-defined-networking using IBM's VPC service where you brought your own custom subnets.  Within those subnets, you provisioned x86 Linux servers and Power9 Linux servers and verified connectivity across the VPC network.  Now you are ready to install some applications and test out load balancing and high availability across multiple data-centers.
 
