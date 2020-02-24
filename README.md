@@ -194,7 +194,7 @@ apt-get -y install nginx
 5.  Refresh your browser pointing to the load balancer and notice the H1 element indicates each of the web servers are being routed to in a round-robin fashion.
 
 
-Congratulations!!!  You have successfully create a software-defined-networking using IBM's VPC service where you brought your own custom subnets.  Within those subnets, you provisioned x86 Linux servers and Power9 Linux servers and verified connectivity across the VPC network.  Now you are ready to install some applications and test out load balancing and high availability across multiple data-centers.
+Congratulations!!!  You have successfully created a software-defined-networking using IBM's VPC service where you brought your own custom subnets.  Within those subnets, you provisioned x86 Linux servers and Power9 Linux servers and verified connectivity across the VPC network.  Now you are ready to install some applications and test out load balancing and high availability across multiple data-centers.
 
 
 ##  Disclaimer:
