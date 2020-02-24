@@ -1,34 +1,37 @@
----
-copyright:
-  years: 2020
-lastupdated: "2020-02-20"
-lasttested: "2020-02-20"
----
+# Creating a multi-zone highly available application using IBM Virtual Private Cloud
+IBM Cloud™ comprises over 60 [data centers](https://www.ibm.com/cloud/data-centers/) around the world.  Additionally, IBM Cloud includes 6 multi-zone regions ([MZR](https://cloud.ibm.com/docs/infrastructure/loadbalancer-service?topic=loadbalancer-service-multi-zone-region-mzr-overview)) where at least 3 geographically dispersed and independent data-centers can be clustered together over a very high-speed, low-latency network to provide the infrastructure for highly available applications.  Within these MZRs, you can create your own Virtual Private Cloud ([VPC](https://cloud.ibm.com/docs/vpc-on-classic?topic=vpc-on-classic-about)), which  provide your own software define network within the IBM public cloud.  VPC gives you the security of a private cloud, with the agility and ease of use as a public cloud.
 
-# Creating a multizone highly available application using IBM Virtual Private Cloud
-
-This tutorial will walk thru creating a custom Virtual Private Cloud (VPC) within IBM Public Cloud.  
+This tutorial will walk thru creating a custom Virtual Private Cloud (VPC) within an MZR of the IBM Public Cloud.  We will cover the following topics:
+1.  Create a custom VPC from scratch.
+2.  Creating custom subnets with BYOIP (Bring your own IP).
+3.  Creating custom security groups to firewall subnet traffic.
+4.  Creating custom Virtual Server Instances (VSI) within this VPC.
+5.  Creating a custom load balancer across the VSIs.
+6.  Verifying high availability and scalability of the VSIs within the MZR.
 
 ## Architecture
+The following diagram depicts the topology of what you will build in this tutorial.  You'll note the topology includes multiple zones which include multiple subnets, which are isolated by zones and logical tiering with security groups to protect what traffic is allowed into and out of the VSIs within these subnets.  While this tutorial focuses on a single MZR, which provides a great deal of resilency from any single point of failure (SPOF), it does not address a complete city outage such as a natural disaster.  For Disaster Recovery scenarios, it is recommended to deploy your application across two or more MZRs as described in this [article](https://cloud.ibm.com/docs/tutorials?topic=solution-tutorials-strategies-for-resilient-applications).
 
-![VPC Architecture](images/billg-vpc-mzr.png)
-
-TODO:  describe diagram with numbers and why
-
-## Outline
-
-1. Configure a Virtual Private Cloud ([VPC](https://cloud.ibm.com/docs/vpc-on-classic?topic=vpc-on-classic-about)).
-2. Create Virtual Server Instances (VSI).
-3. Install web-app workload.
-4. Configure High Availability and horizontal scalability.
-5. Test application resilency.
+![VPC Architecture](images/ibm-vpc-mzr.png)
+* 3X redundancy is needed to achieve [99.999% availability](https://www.ibm.com/garage/method/practices/run/cloud-platform-for-ha) (i.e. <5m per year).
+* IBM Cloud MZRs include 3 zones multiple kilometers apart, but with a <2ms network latency.
+* TODO:  link to substantiate this claim.
+* IBM zones within an MZR are isolated from other zones and provide complete redundancy from other zones within an MZR (i.e. there is no single-point-of-failure across zones)
+* 3 nodes is often recommended for many clustering services (e.g. MariaDB Galera, VMWare, Kubernetes, etc.)
 
 ## Software Defined Networking with a Virtual Private Cloud
+IBM Cloud™ Virtual Private Cloud (VPC) is a virtual network that's tied to your customer account. It gives you cloud security, with the ability to scale dynamically, by providing fine-grained control over your virtual infrastructure and your network traffic segmentation.  
 
-In this section, you will create a custom VPC in a multi-zone-region (MZR) so you can provide high availability across multiple data-centers.
-
+Each VPC is deployed to a single region; however a VPC can span multiple zones (i.e. Data-centers).  For example, in an MZR with 3 data-centers, your VPC can span all 3 data-centers providing a logical network that sits on top of multiple physical networks across these data-centers.  This allows you to recreate your own premise network within the IBM Cloud network which makes migrating to IBM Cloud easier and reduces risk associated with changing your application's underlying network.  Within a VPC are subnets which offer private connectivity:  subnets can talk to each other within the same VPC over a private network link thru the IBM provided implicit router.
 
 ### 1. Create a private virtual cloud (VPC)
+The IBM Cloud is constantly adding new features and services, which is why you will see multiple VSI options:  
+- Classic Virtual Server Instances (VSI) where you'll find VLAN segregated servers, bare metal servers, VMWare servers, SAP servers, etc.
+- Generation 1 VPC VSIs
+- Generation 2 VPC VSIs
+
+This tutorial will use Gen2 VPC VSIs.
+
 1.  Login to the IBM Cloud and click the **hamburger stack** then select **VPC Infrastructure** ([VPC](http://cloud.ibm.com/vpc-ext/overview)) followed by **Create VPC for Gen 2**. 
 
 2.  Fill in values for the **New virtual private cloud** wizard:  
@@ -43,58 +46,59 @@ In this section, you will create a custom VPC in a multi-zone-region (MZR) so yo
 		![VPC Wizard](images/vpc_wizard.png)
 
 ### 2.  Configure VPC defaults.  
+The VPC defaults are designed for simplicity in getting started and may require modification for a production environment where security is paramount.  
+
 1. Drill into your newly created VPC.
 	* Click the **Default ACL** link if you wish to change the name to something more descriptive (e.g. defaultNACL).
 	* Click the **Default Security Group** link to change the name.
 2. Click the **Manage address prefixes** link followed by the **New prefix** link.
-![vpc address prefixes](images/vpc_address_prefixes.png)
 3. Add IP range CIDR block addresses per the Architecture diagram.
-	* Note: Using a subnet naming convention makes it easier to remember the IP addresses.  For example, using 10.10.1.0 for Dallas1 and then 10.10.2.0 for Dallas2.  Also notice skipping 10 for the subnet prefixes to be used by the DB tier with a 10.10.11.0 for Dallas1 and a 10.10.12.0 for Dallas2.  Use what works for you, but consistency and a standard makes it easier with communicating to the team.
-![vpc IP range](images/vpc_subnet_prefixes.png)
+	* Note: Using a subnet naming convention makes it easier to remember the IP addresses.  For example, using 10.10.10.0 for Dallas1 and then 10.10.20.0 for Dallas2. Use what works for you, but consistency and a standard makes it easier with communicating to the team.
+![vpc IP range](images/vpc_address_prefixes.png)
 4. Click the **Overview** breadcrumb link to return to the main VPC page.
 
 ### 3.  Create subnets for your VPC.  
-TODO: blurb about subnets  
+Isolating VSIs to separate subnets allows easier firewalling and protection (e.g. only allow DB connections to the DB subnet and only from the web-tier subnet).  Also, note that subnets can't span zones.
 
 1. Click the **New subnet** button to launch the Subnet wizard.
 2. Change your data-center to match the data-center you used for your addresss prefixes. (e.g. Dallas1)
-3. Enter a name for the web-tier subnet such as the architecture diagram depicts. (e.g. subnet-app1)
+3. Enter a name for the web-tier subnet such as the architecture diagram depicts. (e.g. web1)
 4. Add the subnet to your resource group to make management of your IBM Cloud services easier.
-5. Select the **Address prefix** that matches the Architecture diagram. (e.g. subnet-app1 uses 10.10.1.0/24)
-6. Select **Attached** for the Public gateway if you want the virtual servers to have connectivity to the Internet (e.g. to get OS patches).  *You can add this later if you desire.*
+5. Select the **Address prefix** that matches the Architecture diagram. (e.g. web1 uses 10.10.10.0/24)
+6. Select **Attached** for the Public gateway if you want the virtual servers to have outbound connectivity to the Internet (e.g. to get OS patches).  
 7. Click the **Create subnet** button.
-8. Repeat this section for the 4 subnets in the Architecture diagram.
+8. Repeat this section for the 5 other subnets in the Architecture diagram.
 9. Click the **VPC Layout** link and select your VPC in the drop-down.  Click each subnet box and examine the subnet names, IP address ranges, data-center location, and public Gateway IP address.
-	![vpc layout](images/vpc_layout.png)
-	* Tip:  you may need to resize your browser window to get the subnets to stack in a more readable fashion.
+	![vpc layout](images/vpc_subnets.png)
+	* Notice how the subnets within a zone, use the same Public Gateway.
 
 ### 4.  Create security groups for the Database tier.  
-Tip: *you may also wish to rename the default security group and set the rules*.  
-TODO:  blurb about security groups.  
+Network Interface Cards (NICs) within VSIs are attached to security groups and allow you to filter what traffic is allowed into the VSI.  By default, all traffic is blocked, so you'll need to open up specific ports demanding on what services within the VSI you wish to expose to other computers.  A really helpful feature is the ability to allow VSIs that are attached to other security groups to connect (e.g.  only allow the web-tier VSIs to connect to the db-tier VSIs.)  You can read more about security groups [here](https://cloud.ibm.com/docs/vpc?topic=vpc-using-security-groups).
+
 TODO:  open port 80/443 for web-security-group
 
-1.  From the left-side **VPC Menu**, select the **Security groups** menu item and click the **new security group** link.
+1.  From the left-side **VPC Menu**, select the **Security groups** menu item and click the **new security group** link so you can add a different security group for the database tier. *you can use the default security group for the web tier*
 2.  Enter a name for the security group (e.g. ``db-security-group``).
 3.  Ensure the correct VPC is selected as well as the desired Resource group, then click the **New rule** link for the **Inbound rules** section.
-4.  Choose **TCP** as the Protocol, then select the **Port range** radio button and enter **22** for both the Port min and the Port max (*port 22 is to allow SSH connections*) and click the **Save** button.
-5.  Click the **Security group** radio button for the Source type and choose your default security group.
-	* Tip:  this rule means that VSIs protected by this security group will allow SSH connections from other VSIs that are protected by the default security group.
+4.  Choose **TCP** as the Protocol, then select the **Port range** radio button and enter **22** for both the Port min and the Port max (*port 22 is to allow SSH connections*).
+5.  Next, select the **Security group** radio button for the Source type of the rule and choose your default security group, then click the **Save** button.
+	* Tip:  this rule means that VSIs protected by this security group will allow SSH connections from other VSIs that are protected by the default security group. (i.e. only allow SSH to the DBs from the web VSIs.)
 6.  Click the Inbound **New rule** link again and enter **3306** (*MYSQL Database port*) for Port min and Port max and again select your default security group as the Source type.
-7.  Add another Inbound rule for **ICMP** (*so you can ping the VSIs*) from any Source source (*You can harden things up once you have everything connected together.*).
+7.  Add another Inbound rule for **ICMP** (*so you can ping the VSIs*) traffic from any VSI that is attached to the default security group and click **Save**. 
 8.  Click the Outbound **New rule** link and choose **All** Protocols from **Any** Destination type to permit all outbound traffic from VSIs protected by this security group.
 9.  Once the rules are correct, click the **Create security group** button.
 ![db security group](images/db-security-group.png)
 
  
 ## Virtual Server Instances  
-TODO: blurb about VSIs -- IBM plugs
+Now that you have a VPC created, you can provision Gen2 VSIs within your custom network.  These new VSIs provision rapidly (usually in seconds) and have very high-speed networking (e.g. 100GB).  Additionally, IBM Power hardware is available in Beta, which is particularly good at multi-threaded applications as the CPU includes 2X the threads per core as x86 CPUs, making it more cost effective for multi-threaded applications like DBs, AI jobs, Apache Spark, etc.  You can read more [here](https://cloud.ibm.com/docs/vpc?topic=vpc-about-advanced-virtual-servers).
 
 ### 1. Create VSI for each subnet
 1.  Select the **VPC layout** menu item of the VPC left-side menu and choose your VPC.
 2.  Select each subnet of the VPC and resize the window so you can see the subnets stacked.
 3.  Click the ellipsis in the corner of each subnet and choose **New instance**.
 4.  Fill in the details for the **New virtual server for VPC** wizard.
-	*  Enter a name (e.g. **app-server1**).
+	*  Enter a name (e.g. **db1**).
 	*  Ensure the correct VPC is selected.
 	*  Choose your desired resource group.
 	*  Add any desired Tags.
@@ -104,38 +108,39 @@ TODO: blurb about VSIs -- IBM plugs
 	*  Choose the **2 vCPUs by 8GB RAM** Balanced profile. 
 	*  Click **New key** if your SSH key hasn't been added already; otherwise, just select your existing SSH key.
 		* Fill in the **Add SSH Key** Wizard if needed.
-	*  Leave the Boot volume and Data volume defaults as is, but click the Pencil icon for the **eth0** network interfaces and ensure the correct Subnet is selected (e.g. **subnet-app1** for app-server1 in the first data-center and **subnet-app2** for app-server2 in the second data-center of your VPC.)
+	*  Leave the Boot volume and Data volume defaults as is, but click the Pencil icon for the **eth0** network interfaces and ensure the correct Subnet is selected (e.g. **app1** for web1 in the first data-center and **web2** for web2 in the second data-center of your VPC.)
 	*  Ensure the correct Security group is checked (*See the Architecture diagram if unclear.*).
 	*  Click the **Create virtual server instance** button.
 ![VSI wizard1](images/vsi_page1.png)
 ![VSI wizard2](images/vsi_page2.png)
 	* Note:  the VSI provision very rapidly (*usually in under 1 minute*).
-5.  Repeat step 4 for each VSI in the architecture diagram (i.e. app-server1, app-server2, db-server1, db-server2).
+	* Also note the POWER VSIs are cheaper than x86 since the HW is more performant.
+5.  Repeat step 4 for each VSI in the architecture diagram (i.e. web1..web3, db1..db3).
 ![VPC VSI List](images/vpc_vsis.png)
-6.  Click the **Reserve** link for a new **Floating IP** for the **app-server1** instance so you can SSH into the VSI.
+6.  Click the **Reserve** link for a new **Floating IP** for the **web1** instance so you can SSH into the VSI.
 	* TIP:  VSIs don't have public IP addresses by default which is more secure; however, getting to the VSI without a public IP requires VPN or a jump server or Direct Link, etc. which is beyond the scope of this tutorial.  For a production setup, the author recommends a much more hardened security architecture.
+	* We'll use web1 as the jumpserver to the other VSIs.
 
 ### 2.  Test connectivity across the VPC
+Now that you have VSIs provisioned within isolated subnets within your VPC, you will remotely login to one of your VSIs that has a floating public IP address and then test connectivity to all of the other VSIs within the VPC.
 
-1.  Copy the **Floating IP** from the **app-server1** that you just created and pull up a command-line terminal program (e.g. *Terminal* in MacOS or *Putty* in Windows).
-2.  Connect to the VSI using ssh login (e.g. ``# ssh root@169.48.152.91``).
-![VSI Login](images/vsi_login.png)
-3.  Ping each VSI's private IP in the VPC.
+1.  Copy the **Floating IP** from the **web1** that you just created and pull up a command-line terminal program (e.g. *Terminal* in MacOS or *Putty* in Windows).
+2.  Connect to the VSI using ssh login (e.g. ``# ssh root@52.116.128.59``).  
+![VSI Login](images/vsi_login.png)  
+
+3.  Ping each VSI's private IP in the VPC.  
 ![VSI Ping Test](images/vsi_ping_test.png)  
 	* Notice you can ping all private IP addresses (i.e. 10.10.x.4) out-of-the-box without setting up any explicit routes.  IBM's VPC uses an implicit router to route traffic across your VPC.
-4.  Exit out of **app-server1** and SSH into **db-server1** using **app-server1** as a *jump server* (e.g. ``ssh -J <user>@<jump-server> <user>@<target-server>``).  
+4.  Exit out of **web1** and SSH into **db1** using **web1** as a *jump server* (e.g. ``ssh -J <user>@<jump-server> <user>@<target-server>``) which uses your local private SSH key with the public SSH key that was added to each VSI.  
 ![DB Server Login via Jump Server](images/db_login_jumpserver.png)
-	* Notice that the DB server doesn't have public IP address, so you jumped thru the *Floating IP* of the app-server1 and then into the *private IP* address of the DB server.
+	* Notice that the DB server doesn't have public IP address, so you jumped thru the *Floating IP* of the **web1** and then into the *private IP* address of the DB server.
 5.  Ping Google's DNS address 8.8.8.8 to verify that you have outbound connectivity thru the *Public Gateway* that you attatched to your subnet.  
-![DB Server Outbound Ping](images/db_ping_outside.png)
-
-6.  Do a ``yum update`` to verify that you can update the DB VSI.
+6.  Do a ``apt-get update`` to verify that you can update the DB VSI.
 7.  Run ``lscpu`` to examine the CPU details of the DB-server1.
 ![DB Server POWER CPU Info](images/db_cpu_info.png)
-	* Notice that the database server is a POWER8 CPU running the Ubuntu operating system.
-8.  Repeat the ``apt-get update`` for each VSI using **app-server1** as the jump server.
+	* Notice that the database server is a POWER9 CPU running the Ubuntu operating system.
 
-Congratulations!!!  You have successfully create a software-defined-networking using IBM's VPC service where you brought your own custom subnets.  Within those subnets, you provisioned x86 Linux servers and Power8 Linux servers and verified connectivity across the VPC network.  Now you are ready to install some applications and test out load balancing and high availability across multiple data-centers.
+Congratulations!!!  You have successfully create a software-defined-networking using IBM's VPC service where you brought your own custom subnets.  Within those subnets, you provisioned x86 Linux servers and Power9 Linux servers and verified connectivity across the VPC network.  Now you are ready to install some applications and test out load balancing and high availability across multiple data-centers.
 
 ## Install Application Software on VSIs
 The following section will be done using the Linux command line interface via an SSH connection. 
@@ -283,9 +288,9 @@ https://www.udemy.com/course/aws-certified-solutions-architect-associate/learn/l
 * add user-data to pull from COS with new app-server setup
 * add wordpress install steps to user-data
 * add COS sync (pull from reader) every minute using crontab (``crontab -e``)(https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-rclone)
-# \*/1 * * * * root aws s3 sync --delete /var/www/html s3://mywordpress-code/...  
+# */1 * * * * root aws s3 sync --delete /var/www/html s3://mywordpress-code/...  
 * add COS sync (push from writer) every minute using crontab (``crontab -e``)(https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-rclone)
-# \*/1 * * * * root aws s3 sync --delete s3://mywordpress-code/...  /var/www/html/wp-content/uploads
+# */1 * * * * root aws s3 sync --delete s3://mywordpress-code/...  /var/www/html/wp-content/uploads
 # add file to /var/www/html/wp-content/foo  -> verify file appears in COS
 * burn above to OS image for autoscaling speed
 
@@ -319,4 +324,5 @@ Congratulations!!!  You have successfully installed WordPress on a multi-VSI VPC
 
 
 
-
+##  Disclaimer:
+The postings on this site are my own and don't necessarily represent IBM's positions, strategies or opinions.
