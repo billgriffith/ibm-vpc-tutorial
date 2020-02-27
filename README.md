@@ -105,6 +105,7 @@ Now that you have a VPC created, you can provision Gen2 VSIs within your custom 
 	*  Choose the **2 vCPUs by 8GB RAM** Balanced profile. 
 	*  Click **New key** if your SSH key hasn't been added already; otherwise, just select your existing SSH key.
 		* Fill in the **Add SSH Key** Wizard if needed.
+* TODO:  Add Data volume for wordpress.
 	*  Leave the Boot volume and Data volume defaults as is, but click the Pencil icon for the ``eth0`` network interfaces and ensure the correct Subnet is selected (e.g. ``app1`` for web1 in the first data-center and ``web2`` for web2 in the second data-center of your VPC.)
 	*  Ensure the correct **Security group** is checked (*See the Architecture diagram if unclear.*).
 	*  Click the **Create virtual server instance** button.
@@ -112,9 +113,16 @@ Now that you have a VPC created, you can provision Gen2 VSIs within your custom 
 ![VSI wizard2](images/vsi_page2.png)
 	* Note:  the VSI provision very rapidly (*usually in under 1 minute*).
 	* Also note the POWER VSIs are cheaper than x86 since the HW is more performant.
+
 5.  Repeat step 4 for each VSI in the architecture diagram (i.e. ``web1..web3``, ``db1..db3``).
+	* For the ``web`` servers, you need to add a **Data volume** for the Wordpress files.
+	* Name the volume something descriptive (e.g. ``web1-www-vol``) using the ``Tiered`` profile.
+	* Enter ``100`` for the volume size (i.e. 100GB) and select the default ``3 IOPS/GB``.
+	* To prevent forgetting about this volume, click the **Enabled** toggle for the **Auto Delete**.  
+![VPC VSI List](images/web_data_volume.png)
+6.  Click the **VPC layout** link followed by selecting each subnet to see the details of the VSIs within the appropriate subnets.  
 ![VPC VSI List](images/vpc_vsis.png)
-6.  Click the **Reserve** link for a new **Floating IP** for the **web1** instance so you can SSH into the VSI.
+7.  Click the **Reserve** link for a new **Floating IP** for the **web1** instance so you can SSH into the VSI.
 	* TIP:  VSIs don't have public IP addresses by default which is more secure; however, getting to the VSI without a public IP requires VPN or a jump server or Direct Link, etc. which is beyond the scope of this tutorial.  For a production setup, the author recommends a much more hardened security architecture.
 	* We'll use ``web1`` as the jumpserver to the other VSIs.
 
@@ -142,8 +150,10 @@ In order to test the load balancer, you will install the NGinx web server on eac
 
 1. Login to the web VSI and install NGinx. 
 ```
-apt-get update
+apt-get -y update
 apt-get -y install nginx
+systemctl enable nginx
+systemctl start nginx
 ```
 2. Add the VSI hostname to the default NGinx home page by editing ``/var/www/html/index.nginx-debian.html`` and add ``on <hostname>`` to the H1 element.  
 ![NGINX Home Page](images/nginx_home_page.png)
