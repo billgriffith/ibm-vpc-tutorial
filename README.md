@@ -1,6 +1,6 @@
 # Creating a highly available Wordpress application on the IBM Cloud
 
-IBM Cloud™ comprises over 60 [data centers](https://www.ibm.com/cloud/data-centers/) around the world.  Additionally, IBM Cloud includes 6 multi-zone regions ([MZR](https://cloud.ibm.com/docs/infrastructure/loadbalancer-service?topic=loadbalancer-service-multi-zone-region-mzr-overview)) where at least 3 geographically dispersed and independent data-centers can be clustered together over a very high-speed, low-latency network to provides the infrastructure for highly available applications.  Within these MZRs, you can create your own Virtual Private Cloud ([VPC](https://cloud.ibm.com/docs/vpc-on-classic?topic=vpc-on-classic-about)), which  provide a software define network within the IBM public cloud.  VPC gives you the security of a private cloud, with the agility and ease of use as a public cloud.
+IBM Cloud™ comprises over 60 [data centers](https://www.ibm.com/cloud/data-centers/) around the world.  Additionally, IBM Cloud includes 6 multi-zone regions ([MZR](https://cloud.ibm.com/docs/infrastructure/loadbalancer-service?topic=loadbalancer-service-multi-zone-region-mzr-overview)) where at least 3 geographically dispersed and independent data-centers can be clustered together over a very high-speed, low-latency network to provides the infrastructure for highly available applications.  Within these MZRs, you can create your own Virtual Private Cloud ([VPC](https://cloud.ibm.com/docs/vpc-on-classic?topic=vpc-on-classic-about)), which  provides a software define network within the IBM public cloud.  VPC gives you the security of a private cloud with the agility and ease of use as a public cloud.
 
 This tutorial will walk thru creating a custom Virtual Private Cloud (VPC) within an MZR of the IBM Public Cloud.  We will cover the following topics:
 1.  Create a custom Gen2 VPC from scratch using the IBM Cloud UI.
@@ -15,14 +15,14 @@ The following diagram depicts the topology of what you will build in this tutori
 
 ![VPC Architecture](images/ibm-vpc-mzr.png)
 * 3X redundancy is needed to achieve [99.999% availability](https://www.ibm.com/garage/method/practices/run/cloud-platform-for-ha) (i.e. <5m per year).
-* IBM zones within an MZR are isolated from other zones and provide complete redundancy from other zones within an MZR (i.e. there is no single-point-of-failure across zones)
-* 3 nodes is often recommended for many clustering services (e.g. MariaDB Galera, VMWare, Kubernetes, etc.)
+* IBM zones within an MZR are isolated from other zones and provide complete redundancy from other zones within an MZR (i.e. there is no single-point-of-failure across zones).
+* 3 nodes is often recommended for many clustering services (e.g. MariaDB Galera, VMWare, Kubernetes, etc.).
 
 # Part 1 - Creating a cross MZR VPC with custom subnetting
 
 
 ## Software Defined Networking with a Virtual Private Cloud
-IBM Cloud™ Virtual Private Cloud (VPC) is a virtual network within your Cloud account.  It provides fine-grained security, multi-tenant isolation, and network traffic segmentation.  Each VPC is deployed to a single region; however a VPC can span multiple zones (i.e. Data-centers).  For example, in an MZR with 3 data-centers, your VPC can span all 3 data-centers providing a logical network that sits on top of multiple physical networks across these data-centers.  This allows you to recreate your own premise network (e.g. 10.10.x.x or 192.168.x.x) without conflicting with other tenants that use these same IP addresses within their custom VPC.  This makes migrating to IBM Cloud easier and reduces risk associated with changing your application's underlying network.  
+IBM Cloud™ Virtual Private Cloud (VPC) is a virtual network within your Cloud account.  It provides fine-grained security, multi-tenant isolation, and network traffic segmentation.  Each VPC is deployed to a single region; however, a VPC can span multiple zones (i.e. Data-centers).  For example, in an MZR with 3 data-centers, your VPC can span all 3 data-centers providing a logical network that sits on top of multiple physical networks across these data-centers.  This allows you to recreate your own premise network (e.g. 10.10.x.x or 192.168.x.x) without conflicting with other tenants that use these same IP addresses within their custom VPC.  This makes migrating to IBM Cloud easier and reduces risk associated with changing your application's underlying network.  
 
 
 ### 1. Create a private virtual cloud (VPC).
@@ -50,7 +50,7 @@ This tutorial will use Gen2 VPC VSIs.
 The VPC defaults are designed for simplicity in getting started and may require modification for a production environment where security is paramount.  
 
 1. Drill into your newly created VPC.
-	* Click the **Default ACL** link if you wish to change the name to something more descriptive (e.g. ``defaultNACL``).
+	* Click the **Default ACL** link if you wish to change the name to something more descriptive (e.g. ``default-nacl``).
 	* Click the **Default Security Group** link to change the name (e.g. ``web-security-group``).
 2. Click the **Manage address prefixes** link followed by the **New prefix** link.
 3. Add IP range CIDR block addresses per the Architecture diagram.
@@ -100,7 +100,7 @@ Now that you have a VPC created, you can provision Gen2 VSIs within your custom 
 4.  Fill in the details for the **New virtual server for VPC** wizard.
 	*  Enter a name (e.g. ``db1``).
 	*  Ensure the correct **VPC** is selected.
-	*  Choose your desired **resource group**.**
+	*  Choose your desired **resource group**.
 	*  Add any desired **Tags**.
 	*  Choose the **data-center** that matches the diagram (e.g. ``Dallas1``).
 	*  For the web-tier, choose **x86** as the chipset.  For the data-tier, choose **POWER**.
@@ -108,19 +108,19 @@ Now that you have a VPC created, you can provision Gen2 VSIs within your custom 
 	*  Choose the **2 vCPUs by 8GB RAM** Balanced profile. 
 	*  Click **New key** if your SSH key hasn't been added already; otherwise, just select your existing SSH key.
 		* Fill in the **Add SSH Key** Wizard if needed.
-	*  Leave the Boot volume and Data volume defaults for the database VSIs, but click the Pencil icon for the ``eth0`` network interfaces and ensure the correct Subnet is selected (e.g. ``web1`` for web1 in the first data-center and ``web2`` for web2 in the second data-center of your VPC.)
+	*  Leave the Boot volume and Data volume defaults for the database VSIs, but click the **pencil** icon for the ``eth0`` network interfaces and ensure the correct Subnet is selected (e.g. ``web1`` for web1 in the first data-center and ``web2`` for web2 in the second data-center of your VPC.)
 	*  Ensure the correct **Security group** is checked (*See the Architecture diagram if unclear.*).
 	*  Click the **Create virtual server instance** button.
 ![VSI wizard1](images/vsi_page1.png)
 ![VSI wizard2](images/vsi_page2.png)
-	* Note:  the VSI provision very rapidly (*usually in under 1 minute*).
+	* Note:  the VSI provisions very rapidly (*usually in under 1 minute*).
 	* Also note the POWER VSIs are cheaper than x86 since the HW is more performant.
 
 5.  Repeat step 4 for each VSI in the architecture diagram (i.e. ``web1..web3``, ``db1..db3``).
 	* For the ``web`` servers, you need to add a **Data volume** for the Wordpress files.
 	* Name the volume something descriptive (e.g. ``web1-www-vol``) using the ``Tiered`` profile.
 	* Enter ``100`` for the volume size (i.e. 100GB) and select the default ``3 IOPS/GB``.
-	* To prevent forgetting to delete this volume, click the **Enabled** toggle for the **Auto Delete**.  
+	* To prevent forgetting to delete this volume, click the **Enabled** toggle for the **Auto Delete** followed by the **Attach** button.
 ![VPC VSI List](images/web_data_volume.png)
 6.  Click the **VPC layout** link followed by selecting each subnet to see the details of the VSIs within the appropriate subnets.  
 ![VPC VSI List](images/vpc_vsis.png)
@@ -132,7 +132,7 @@ Now that you have a VPC created, you can provision Gen2 VSIs within your custom 
 Now that you have VSIs provisioned within isolated subnets within your VPC, you will remotely login to one of your VSIs that has a floating public IP address and then test connectivity to all of the other VSIs within the VPC.
 
 1.  Copy the **Floating IP** from the ``web1`` VSI that you just created and pull up a command-line terminal program (e.g. *Terminal* in MacOS or *Putty* in Windows).
-2.  Connect to the VSI using ssh login (e.g. ``# ssh root@52.116.128.59``).  
+2.  Connect to the VSI using an ssh login (e.g. ``# ssh root@52.116.128.59``).  
 ![VSI Login](images/vsi_login.png)  
 
 3.  Ping each VSI's private IP in the VPC.  
@@ -153,6 +153,7 @@ In order to test the load balancer, you will install the Nginx web server on eac
 1. Login to the web VSI and install Nginx. 
 	```
 	apt-get -y update
+	apt-get -y upgrade
 	apt-get -y install nginx
 	systemctl enable nginx
 	systemctl start nginx
@@ -160,11 +161,8 @@ In order to test the load balancer, you will install the Nginx web server on eac
 2. Add the VSI hostname to the default Nginx home page by editing ``/var/www/html/index.nginx-debian.html`` and add ``on <hostname>`` to the H1 element.  
 	![NGINX Home Page](images/nginx_home_page.png)
 
-3. Test that Nginx is serving up content with ``curl localhost``.
-```
-TODO: vi /var/www/html/index.nginx-debian.html
-TODO: curl localhost output
-```
+3. Test that Nginx is serving up content with ``curl localhost``.  
+![Nginx Curl Test](images/nginx_curl_output.png)  
 
 4. Repeat this process for the remaining web VSIs.
 
@@ -181,7 +179,7 @@ The IBM Load Balancer for VPC provides the capability to route network traffic a
 8.  Click the **Subnets** drop-down and choose the 3 ``web`` subnets you previously created. 
 	![Load Balancer Subnets](images/wordpress_load_balancer.png)
 9.  Click the **New pool** link to configure the **Back-end pool** of services this load balancer will route to.
-10.  Name the back-end pool (e.g. ``web-servers``) and leave the **Defaults** for the rest then click **Save**.  
+10.  Name the back-end pool (e.g. ``web-servers``) then enter ``/index.html`` for the **Health check path**.  You can leave the **Defaults** for the rest then click **Save**.  
 	- Note: *The Load Balancer can offload HTTPS encryption for you so you can use HTTP between the load balancer and the Nginx web servers.*
 11.  Click the **Attach** link to add **Instances** to the **Back-end pool**.
 12.  Add the ``web`` subnets and choose the ``web`` VSI in that subnet.  Repeat this for all 3 zones of the MZR, then click the **Attach** button.  
@@ -199,8 +197,8 @@ Now you can test connectivity to your private ``web-servers`` thru the load bala
 1.  Drill into the newly created load balancer and notice the **Heath Status** shows **0/3** and is **Red**.  
 ![Load Balancer Heath Status](images/load_balancer_heath_status.png)
 	* The health status is failing as port 80 is blocked by the **default-security-group**.
-	* Add an **Inbound rule** for TCP port 80 from any source so you can connect to Nginx.
-	* TODO:  screenshot of port 80 security-group-rule.
+	* Add an **Inbound rule** for TCP port 80 from any source so you can connect to Nginx.  
+	![Web Security Group](images/web_security_group_http.png)
 
 2.  Go back to your load balancer and watch the **Heath Status** go from **Red** to **Yellow** to **Green**.  
 	![Load Balancer Status Good](images/load_balancer_status_good.png)
@@ -208,11 +206,11 @@ Now you can test connectivity to your private ``web-servers`` thru the load bala
 3.  Click the **Hostname** dotted link to copy the public URL.
 4.  Paste this URL into your web browser and notice Nginx is serving up the default index page.  
 	![Nginx Default Page](images/nginx_default_page.png)
-5.  Refresh your browser pointing to the load balancer and notice the H1 element indicates each of the web servers are being routed to in a round-robin fashion.
+5.  Refresh your browser which is pointing to the load balancer and notice the H1 element indicates each of the web servers are being routed to in a round-robin fashion.
 
 
 ## Congratulations  
-  You have successfully created part 1 of this tutorial where you built a software-defined-network using IBM's VPC service.  You also built a custom subnet where you could use your own subnets.  Within those subnets, you provisioned x86 Linux servers and Power9 Linux servers and verified connectivity across the VPC network.  Finally, you create a VPC load balancer in front of Nginx web servers that you verified network traffice is being distributed among them.  Now you are ready to install some applications and test out load balancing and high availability across multiple data-centers.
+  You have successfully created part 1 of this tutorial where you built a software-defined-network using IBM's VPC service.  You also built a custom subnet where you could use your own subnets.  Within those subnets, you provisioned x86 Linux servers and Power9 Linux servers and verified connectivity across the VPC network.  Finally, you created a VPC load balancer in front of Nginx web servers that you verified network traffic was being distributed to.  Now you are ready to install some applications and test out load balancing and high availability across multiple data-centers.
 
 
 
@@ -230,7 +228,7 @@ The IBM Cloud provides additional highly-available databases should you want an 
 
 
 ### 1. Install MariaDB on the Database Servers
-1.  Open three terminals and connect to each database server (e.g. ``db1``) via ssh.  
+1.  Open three terminal shells and connect to each database server (e.g. ``db1``) via ssh.  
 	```
 	# ssh -J root@<jump_server> root@<db_server>
 	ssh -J root@52.116.128.59 root@10.10.11.4
@@ -243,8 +241,9 @@ The IBM Cloud provides additional highly-available databases should you want an 
 2.  Install the MariaDB 10.3 database on each ``db`` VSI.  
 	```
 	# MariaDB 10.3 is the default at this time on Ubuntu 18.04
-	apt-get update
-	apt-get install mariadb-server mariadb-client galera
+	apt-get -y update
+	apt-get -y upgrade
+	apt-get -y install mariadb-server mariadb-client galera
 	```  
 
 3. Configure Galera settings on each DB server.  
@@ -265,6 +264,7 @@ The IBM Cloud provides additional highly-available databases should you want an 
 	# listen on all IPv4 interfaces
 	bind-address           = 0.0.0.0
 	```  
+	* Tip: Ensure you only have one ``bind-address`` property.
 
 4. Open security group ports for Galera replication.  
 	* Open TCP port ``4444`` for any node of the ``db-security-group``.
@@ -328,7 +328,7 @@ The IBM Cloud provides additional highly-available databases should you want an 
 	mysql -u root -p
 	CREATE DATABASE wordpress;
 	# TODO:  can we use wp_admin instead of root?
-	GRANT ALL ON wordpress.\* TO root@'10.10.%.%' IDENTIFIED BY 'mariaL0vesVPC' WITH GRANT OPTION;
+	GRANT ALL ON wordpress.* TO root@'10.10.%.%' IDENTIFIED BY 'mariaL0vesVPC' WITH GRANT OPTION;
 	FLUSH PRIVILEGES;
 	show databases;
 	EXIT;
@@ -340,7 +340,7 @@ We will use Nginx as the web server with PHP for the application server function
 ### 1. Install PHP libraries
 You could use the [``user-data`` field](https://cloud.ibm.com/docs/vpc-on-classic-vsi?topic=vpc-on-classic-vsi-user-data) while provisioning the VSIs to do many of these steps during VSI provisioning (you could also burn a [custom image](https://cloud.ibm.com/docs/vpc?topic=vpc-managing-images) from one VSI once it had been installed and configured as desired), but this tutorial walks thru the steps from scratch so you can see what is going on and to make debugging much easier should you run into errors during the process.  
 
-1.  Open three terminals and connect to each web server (e.g. ``web1``) via ssh.  
+1.  Open three terminals shells and connect to each web server (e.g. ``web1``) via ssh.  
 	```
 	# ssh -J root@<jump_server> roott@<web_server>
 	ssh -J root@52.116.128.59 root@10.10.10.4
@@ -414,7 +414,7 @@ We will use [GlusterFS](https://docs.gluster.org/en/latest/Administrator%20Guide
 
 1.  Install glusterFS on each ``web`` server.  
 	```
-	apt update
+	apt update -y
 	apt upgrade -y
 	add-apt-repository -y ppa:gluster/glusterfs-7  
 	apt install -y glusterfs-server
@@ -424,12 +424,23 @@ You first need to create an ``xfs`` filesystem on the disk (i.e. the ``web1-www-
 	```
 	# find your disk
 	lsblk
+	# block devices output
+	NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+	vda    252:0    0  100G  0 disk 
+	├─vda1 252:1    0  256M  0 part /boot
+	└─vda2 252:2    0 99.8G  0 part /
+	vdb    252:16   0  100G  0 disk 
+	vdc    252:32   0  370K  0 disk 
+	vdd    252:48   0   44K  0 disk [SWAP]
 	```	
-	TODO:  (image)
+	* Notice the ``vdb`` at 100G is the extra **data volume** (i.e. ``web1-www-vol``) that you created during provisioning the ``web`` VSI.
+	
 * Format the disk using the ``xfs`` filesystem type.  
 	```
 	mkfs.xfs /dev/vdb
 	```
+	* You could partition the disk or use a logical volume manager before adding a filesystem, but we just format the whole drive to make things easy.  
+
 * Mount the disk
 	```
 	# first mount the block device locally, then you can mount the glusterFS 
@@ -449,19 +460,18 @@ You first need to create an ``xfs`` filesystem on the disk (i.e. the ``web1-www-
 
 4. Add nodes to trusted storage pool from **one** node only.
 	```
+	# from web1
 	gluster peer probe 10.10.20.4
 	gluster peer probe 10.10.30.4
 	# verify peer trust
 	gluster peer status
+	gluster pool list
 	```  
 	![Gluster Peer Status](images/gluster_peer_status.png)
 
 5. Create Gluster Volume from **one** node only.  
 	```
-	gluster volume create wordpress-vol replica 3 \
-	10.10.10.8:/gluster/wordpress/brick01 \
-	10.10.20.8:/gluster/wordpress/brick02 \
-	10.10.30.7:/gluster/wordpress/brick03
+	gluster volume create wordpress-vol replica 3 10.10.10.4:/gluster/wordpress/brick01 10.10.20.4:/gluster/wordpress/brick02 10.10.30.4:/gluster/wordpress/brick03
 	# start the volume
 	gluster volume start wordpress-vol
 	root@web1:~# gluster volume status wordpress-vol
@@ -482,13 +492,13 @@ You first need to create an ``xfs`` filesystem on the disk (i.e. the ``web1-www-
 	------------------------------------------------------------------------------
 	There are no active volume tasks
 	```
-	* Ensure you have an Inbound security group rule to allow all traffic (or TCP port 49152 for Gluster) among VSIs of the same security group.  
+	* Ensure you have an **Inbound** security group rule to allow **all** traffic (or TCP port 49152 for Gluster) among VSIs of the same security group.  
 	![Gluster Security Group](images/gluster_security_group.png)
 
 * Only allow ``web`` nodes to mount the Gluster volume.   
 	```
 	# run from one node only
-	gluster volume set wordpress-vol auth.allow 10.10.10.8,10.10.20.8,10.10.30.7
+	gluster volume set wordpress-vol auth.allow 10.10.10.4,10.10.20.4,10.10.30.4
 	```
 
 6. Mount the GlusterFS volume locally on **each** ``web`` server.
@@ -497,7 +507,7 @@ You first need to create an ``xfs`` filesystem on the disk (i.e. the ``web1-www-
 	systemctl stop nginx
 	mv /var/www/html{,.orig}
 	mkdir /var/www/html
-	echo 'localhost:/wordpress-vol /var/www/html glusterfs defaults,\_netdev 0 0' >> /etc/fstab
+	echo 'localhost:/wordpress-vol /var/www/html glusterfs defaults,_netdev 0 0' >> /etc/fstab
 	mount -a
 	df -h
 	```
@@ -517,13 +527,13 @@ You first need to create an ``xfs`` filesystem on the disk (i.e. the ``web1-www-
 	```
 
 ### 4. Install Wordpress  
-Since GlusterFS will replicate ``/var/www/html`` to all of the ``web`` servers, you only need to install it once.
+Since GlusterFS will replicate ``/var/www/html`` to all of the ``web`` servers, you only need to install Wordpress on one node.
 1.  Download and install Wordpress on one of the ``web`` servers.  
 	```
 	cd /tmp && wget https://wordpress.org/latest.tar.gz
 	tar -xvf /tmp/latest.tar.gz 
 	# put wordpress in html to make things easy 
-	cp -r /tmp/wordpress/\* /var/www/html/
+	cp -r /tmp/wordpress/* /var/www/html/
 	rm -rf /tmp/wordpress
 	rm -rf /tmp/latest.tar.gz
 	chown -R www-data:www-data /var/www/html/wp-content
@@ -531,12 +541,12 @@ Since GlusterFS will replicate ``/var/www/html`` to all of the ``web`` servers, 
 	mv /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
 	```
 
-2.  Update ``/etc/hosts`` with the database IP address.
+2.  Update ``/etc/hosts`` with the database IP address on **each** ``web`` node.
 	* Use the same database name (e.g. ``mariadb``) on all ``web`` servers, but change the **IP Address** to the corresponding ``db`` server in the same **zone**.  
 
 		![DB IP Address](images/etchost_dbserver.png)
 
-3. Configure Wordpress to point to db servers.  
+3. Configure Wordpress on **one** node only to point to db servers.  
 	* Get wordpress secret-keys using ``# curl  https://api.wordpress.org/secret-key/1.1/salt/``
 	* Copy them into wp-config.php
 	* Edit ``/var/www/html/wp-config.php`` and set the DB parameters
@@ -545,8 +555,8 @@ Since GlusterFS will replicate ``/var/www/html`` to all of the ``web`` servers, 
 	define('DB_USER', 'root');  # TODO:  can I use db_admin
 	define('DB_PASSWORD', 'mariaL0vesVPC');
 	define('DB_HOST', 'mariadb'); # use private load balancer
-	#define('FS_METHOD', 'direct');  # TODO:  do I need this?
 	```
+	![Wordpress Configuration](images/wordpress_config.png)
 
 4.  Start nginx on **each** ``web`` server.
 	```
@@ -556,21 +566,94 @@ Since GlusterFS will replicate ``/var/www/html`` to all of the ``web`` servers, 
 	```
 
 5. Verify Wordpress
-	*  Open the ``web-load-balancer`` hostname in your web browser:  http://floatingIP
+	*  Open the ``web-load-balancer`` hostname (e.g. ``956071b2-us-south.lb.appdomain.cloud``) in your web browser.  
 
-	* TODO:  screenshot
+6. Setup Wordpress
+  * Enter ``Wordpress on IBM VPC`` for the **Site Title**.
+  * Enter ``<an admin userID>`` for the **Username** field.
+  * Enter a strong ``password``.
+  * Enter your ``admin's email address``.
+  * Click to ``Discourage search engines...``.
+  * Click **Install WordPress**.
+  ![Wordpress Setup](images/wordpress_setup.png)
+
+7.  Add a Wordpress Post
+  * Login to Wordpress
+  * Click **Posts** link, then click **Add New** button.
+  * Add your post.
+    ![Wordpress Post](images/wordpress_post.png)
+  * Publish your post.
+
+8.  Verify Wordpress High Availability
+  * From ``web1`` do a find command to verify your image was uploaded in your post.
+  ```
+    find /var/www/html/wp-content/uploads/
+    /var/www/html/wp-content/uploads/
+    /var/www/html/wp-content/uploads/2020
+    /var/www/html/wp-content/uploads/2020/03
+    /var/www/html/wp-content/uploads/2020/03/billface-1.png
+  ```
+  * Repeat the ``find`` command from another ``web`` node and you'll see the image is there also.
 
 ## Failover Testing
 Now that you have a highly available 3 zone web application, you can now test various failures and ensure your web application continues to process user requests.
 
-### 1.  Configure Wordpress
 
-### 2.  Test DB failure
-TODO:  Update health-check for Wordpress to verify DB is working so no traffic is routed to the web server if the DB is down.
+### 1.  Test DB failure
+Shutdown one of the ``db`` nodes and verify Wordpress continues to work.  
+  * Click the **Virtual server instances** link in the **VPC Infrastructure** section of the IBM Cloud console.  
+  * Click **ellipsis** next to ``db1`` and choose **Stop**.  
+    ![Stop DB1](images/db1_stop.png)
+  * Refresh Wordpress URL (i.e. Load Balancer hostname) a few times to cycle thru to the failing DB.
+    ![Wordpress Failure](images/wordpress_failure.png)
+      * Notice you get an outage, even though you have 2 other DBs.  You need to tell the **Load Balancer** to not route traffic to a ``web`` server IF the ``db`` for that zone is down.
+  * Edit the ``web-servers`` **Back-end pool** in your ``wordpress-load-balancer`` and change the **Health check** value from ``/index.html`` to ``/index.php``.
+    ![Wordpress Healthcheck](images/wordpress_healthcheck.png)
+      * Now the Load Balancer will know not to route traffic to the failing ``web`` server if Nginx is down or if the database is down.
+  * Try refreshing your browser a few times and notice that the 504 Gateway Time-out error doesn't reappear.
+  * Restart the ``db`` node that you stopped earlier.
+	
 
-### 3.  Test Web failure
+### 2.  Test Web failure
+Shutdown one of the ``web`` nodes and verify Wordpress continues to work.
+  * Stop a ``web`` node if a different zone than the zone from your ``db`` test. 
+  * Refresh your browser and notice you don't see any errors; yet if you check the ``wordpress-load-balancer``, you'll notice only 2/3 web-servers are up.
+    ![Wordpress Web Failure](images/wordpress_web_failure.png)
+  * Edit your previous post and upload a new image.
+  * Examine the filesystem of each ``web`` node and verify uploads are still working after the *db* failure and the *web* failure.
 
-### 4.  Test Rejoining Cluster
+	```
+	root@web3:~# find /var/www/html/wp-content/uploads/
+	/var/www/html/wp-content/uploads/
+	/var/www/html/wp-content/uploads/2020
+	/var/www/html/wp-content/uploads/2020/03
+	/var/www/html/wp-content/uploads/2020/03/billface-1.png
+	/var/www/html/wp-content/uploads/2020/03/wordpress_healthcheck.png
+	/var/www/html/wp-content/uploads/2020/03/wordpress_healthcheck-300x187.png
+	/var/www/html/wp-content/uploads/2020/03/wordpress_healthcheck-150x150.png
+	/var/www/html/wp-content/uploads/2020/03/wordpress_healthcheck-768x479.png
+	```
+	* Examine the **db** server to verify your update is persisting.
+
+	```
+	root@db3:~# mysql -u root -p
+	MariaDB [(none)]> show databases;
+	MariaDB [(none)]> use wordpress;
+	MariaDB [wordpress]> show tables;
+	MariaDB [wordpress]> select * from wp_posts;
+	```
+
+
+### 5.  Cleaning up everything
+You have to remove things in order of dependency.  You can of course do this from command line so you could have a deleteVPC script, but for the sake of completeness, we'll use the IBM Cloud UI.  
+
+  1.  Release any **Floating IP addresses** from your VSIs.
+  2.  Stop all **VSIs** of your VPC.
+  3.  Delete all **VSIs** from your VPC.
+  4.  Delete all **Load Balancers** from your VPC.
+  5.  Delete all **subnets** from your VPC.
+  6.  Verify all **Block storage volumes** are deleted from your VPC.
+  7.  Finally, delete your custom **VPC**.
 
 
 ## Congratulations
